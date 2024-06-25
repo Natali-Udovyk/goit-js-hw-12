@@ -6,6 +6,12 @@ import iziToast from "izitoast";
 // Додатковий імпорт стилів
 import "izitoast/dist/css/iziToast.min.css";
 
+const searchInput = document.querySelector('.search-input');
+    const loader = document.querySelector('.loader');
+    const loadMoreButton = document.querySelector('#loadMoreButton');
+    const totalHitsDiv = document.querySelector('#totalHits');
+    const loadingText = document.querySelector('#loadingText'); 
+
 let page = 1;
 let perPage = 15;
 let currentQuery = '';
@@ -13,52 +19,41 @@ let totalHits = 0;
 let isFirstLoad = true; 
 document.querySelector('.form').addEventListener('submit',async function(event) {
     event.preventDefault();
-    const searchInput = document.querySelector('.search-input');
     const searchQuery = searchInput.value.trim();
-    const loader = document.querySelector('.loader');
-    const loadMoreButton = document.querySelector('#loadMoreButton');
-    const totalHitsDiv = document.querySelector('#totalHits');
-    const loadingText = document.querySelector('#loadingText'); 
-
-    // if (isFirstLoad) {
-    //     loader.style.display = 'block';
-    // }
     loadingText.style.display = 'block';
-    
-    try{
-        if (!searchQuery) {
-            iziToast.error({
-                title: 'Error',
-                message: "The search query cannot be empty. Please enter a valid query!",
-            });
-            loader.style.display = 'none'; 
-            return; 
-        }
-
-        currentQuery = searchQuery;  // Зберігаємо поточний запит
-        page = 1;  // Скидаємо сторінку на 1 при новому пошуку
+    currentQuery = searchQuery;  
+        page = 1;
         gallery.innerHTML = '';
-
+    if (!searchQuery) {
+        iziToast.error({
+            title: 'Error',
+            message: "The search query cannot be empty. Please enter a valid query!",
+        });
+        loader.style.display = 'none';
+        loadingText.style.display = 'none';
+        return; 
+    }
+    try{
         const response = await fetchImages(currentQuery, page, perPage);
         const images = response.hits;
         totalHits = response.totalHits;
 
-        // setTimeout(() => {
-        //     loader.style.display = 'none';
-        //     searchInput.value = ''; 
-        // }, 1000); 
         if (isFirstLoad) {
             setTimeout(() => {
                 loader.style.display = 'none';
+                loadingText.style.display = 'none';
                 searchInput.value = '';
             }, 1000);
-            isFirstLoad = false; // Після першого завантаження виставляємо змінну в false
+            isFirstLoad = false;
         }
         if (!Array.isArray(images) || images.length === 0) {
             iziToast.error({
                 title: 'Error',
                 message: "No images found. Please try a different query!",
             });
+            loadMoreButton.style.display = 'none';
+            loadingText.style.display = 'none';
+            totalHitsDiv.textContent ='';
             return; 
         }
         renderGalleryItems(images);
@@ -66,27 +61,27 @@ document.querySelector('.form').addEventListener('submit',async function(event) 
         loadMoreButton.style.display = 'block';
         totalHitsDiv.textContent = `Total images found: ${totalHits}`;
 
+
     } catch(error) {
         console.error("Failed to fetch images:", error);
-        setTimeout(() => {
-            loader.style.display = 'none';
-            searchInput.value = ''; 
-        }, 1000);
         iziToast.error({
             title: 'Error',
             message: "Failed to load images. Please try again!",
         });
-    } finally {
+        totalHitsDiv.textContent = '';
+    } 
+    
+     finally {
         loadingText.style.display = 'none'; }
 
 });
 
 document.querySelector('#loadMoreButton').addEventListener('click', async function(event) {
-    event.preventDefault()
+    // event.preventDefault()
     const loader = document.querySelector('.loader');
     const loadMoreButton = document.querySelector('#loadMoreButton');
     const loadingText = document.querySelector('#loadingText');
-
+    const totalHitsDiv = document.querySelector('#totalHits');
     loader.style.display = 'block';
     loadMoreButton.style.display = 'none';
     loadingText.style.display = 'block';
@@ -101,11 +96,13 @@ document.querySelector('#loadMoreButton').addEventListener('click', async functi
                 message: "We're sorry, but you've reached the end of search results.",
             });
             loadMoreButton.style.display = 'none';
+            loader.style.display = 'none';
             return;
         }
         renderGalleryItems(images);
         page += 1;  
-        const firstGalleryItem = document.querySelector('.gallery-item');
+
+        const firstGalleryItem = document.querySelector('.gallery-link');
         if (firstGalleryItem) {
             const itemHeight = firstGalleryItem.getBoundingClientRect().height;
             window.scrollBy({
@@ -113,7 +110,17 @@ document.querySelector('#loadMoreButton').addEventListener('click', async functi
                 behavior: "smooth",
             });
         }
-
+        if (page * perPage >= totalHits) {
+            loadMoreButton.style.display = 'none';
+            loader.style.display = 'none';
+            totalHitsDiv.textContent = '';
+            iziToast.info({
+                title: 'Info',
+                message: "You have reached the end of the search results.",
+            });
+        } else {
+            loadMoreButton.style.display = 'block'; 
+        }
     } catch (error) {
         setTimeout(() => {
             loader.style.display = 'none';
@@ -125,8 +132,11 @@ document.querySelector('#loadMoreButton').addEventListener('click', async functi
     } finally {
         setTimeout(() => {
             loader.style.display = 'none';
-            loadMoreButton.style.display = 'block';
+            if (page * perPage < totalHits) {
+                loadMoreButton.style.display = 'block';
+            }
             loadingText.style.display = 'none';
+            
         }, 1000);
     }
 });

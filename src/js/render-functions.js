@@ -2,11 +2,12 @@
 import SimpleLightbox from "simplelightbox";
 // Додатковий імпорт стилів
 import "simplelightbox/dist/simple-lightbox.min.css";
+
 export const gallery = document.querySelector('.gallery');
 const lightbox = new SimpleLightbox('.gallery a');
 
 export function renderGalleryItems(images) {
-   
+  
     const newItems = images.map((image) => `
         <a class= "gallery-link" href="${image.largeImageURL}">
             <img src="${image.webformatURL}" class="gallery-image" alt="${image.tags}" />
